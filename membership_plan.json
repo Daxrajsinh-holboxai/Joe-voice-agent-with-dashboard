@@ -1,0 +1,44 @@
+{
+    "membership_plans": {
+      "25-Minute Sessions": [
+        {
+          "plan_type": "4 sessions/month",
+          "price": 149,
+          "shareable": false,
+          "description": "Best for quick sessions to maintain flexibility and ease muscle tension."
+        },
+        {
+          "plan_type": "8 sessions/month",
+          "price": 279,
+          "shareable": true,
+          "description": "Best for quick sessions to maintain flexibility and ease muscle tension."
+        },
+        {
+          "plan_type": "12 sessions/month",
+          "price": 409,
+          "shareable": true,
+          "description": "Best for quick sessions to maintain flexibility and ease muscle tension."
+        }
+      ],
+      "50-Minute Sessions": [
+        {
+          "plan_type": "4 sessions/month",
+          "price": 249,
+          "shareable": false,
+          "description": "Ideal for longer sessions focused on relaxation and deep muscle release."
+        },
+        {
+          "plan_type": "8 sessions/month",
+          "price": 519,
+          "shareable": true,
+          "description": "Ideal for longer sessions focused on relaxation and deep muscle release."
+        },
+        {
+          "plan_type": "12 sessions/month",
+          "price": 749,
+          "shareable": true,
+          "description": "Ideal for longer sessions focused on relaxation and deep muscle release."
+        }
+      ]
+    }
+  }

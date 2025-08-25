@@ -1,0 +1,87 @@
+{
+    "Chicken Meals": [
+        {
+            "name": "Signature Crispy Chicken",
+            "description": "Crispy, golden fried chicken with a secret blend of spices.",
+            "price": 8.99
+        },
+        {
+            "name": "Spicy Wings",
+            "description": "Wings served with three heat levels: mild, medium, hot.",
+            "price": 5.99
+        },
+        {
+            "name": "Chicken Tenders",
+            "description": "Golden-fried tenders, served with your choice of dipping sauce.",
+            "price": 6.99
+        }
+    ],
+    "Sides": [
+        {
+            "name": "Fries",
+            "description": "Crispy golden fries, lightly salted.",
+            "price": 2.49
+        },
+        {
+            "name": "Mashed Potatoes",
+            "description": "Creamy mashed potatoes with a touch of butter.",
+            "price": 2.99
+        },
+        {
+            "name": "Coleslaw",
+            "description": "Freshly made coleslaw with a tangy dressing.",
+            "price": 1.99
+        }
+    ],
+    "Combo Meals": [
+        {
+            "name": "Chicken Combo",
+            "description": "Choice of any chicken dish with fries and a drink.",
+            "price": 12.99
+        },
+        {
+            "name": "Wings Combo",
+            "description": "Spicy wings with a side and a drink.",
+            "price": 10.99
+        }
+    ],
+    "Family Meal Deals": [
+        {
+            "name": "Family Chicken Meal Deal",
+            "description": "12 pieces of chicken, 2 sides, and 4 drinks.",
+            "price": 29.99
+        },
+        {
+            "name": "Large Family Meal",
+            "description": "15 pieces of chicken, 3 sides, and 6 drinks.",
+            "price": 39.99
+        }
+    ],
+    "Drinks": [
+        {
+            "name": "Coke",
+            "description": "Classic Coca-Cola for a refreshing, fizzy experience.",
+            "price": 1.99
+        },
+        {
+            "name": "Sprite",
+            "description": "A lemon-lime soda that’s crisp and refreshing.",
+            "price": 1.99
+        },
+        {
+            "name": "Diet Coke",
+            "description": "A low-calorie, refreshing soda with the same classic taste.",
+            "price": 1.99
+        },
+        {
+            "name": "Iced Tea",
+            "description": "Chilled and refreshing, perfect for a warm day.",
+            "price": 1.49
+        },
+        {
+            "name": "Lemonade",
+            "description": "A sweet and tangy drink made with fresh lemons.",
+            "price": 1.49
+        }
+    ]
+}
