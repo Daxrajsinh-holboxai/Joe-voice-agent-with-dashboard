@@ -104,6 +104,15 @@
             "contact_number": "7474901326",
             "membership_plan": "8 sessions/month",
             "reason_for_joining": "I just wanna get bit and, you know, healthy."
+        },
+        {
+            "user_id": "USR008",
+            "first_name": "Zen",
+            "last_name": "Tom",
+            "email": "a@one.com",
+            "contact_number": "13456789",
+            "membership_plan": "4 sessions/month",
+            "reason_for_joining": "flexibility improvement"
         }
     ]
 }

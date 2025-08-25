@@ -139,6 +139,16 @@
             "trainer": "Emma Johnson",
             "trainee": "Jane Smith",
             "status": "Scheduled"
+        },
+        {
+            "session_id": "SES015",
+            "user_id": "USR004",
+            "session_date": "2025-08-24",
+            "session_time": "09:00 AM",
+            "session_type": "50-Minute Stretch",
+            "trainer": "Emma Johnson",
+            "trainee": "Emily Davis",
+            "status": "Scheduled"
         }
     ]
 }

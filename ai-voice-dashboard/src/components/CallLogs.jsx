@@ -1,6 +1,22 @@
+import { useState } from 'react';
 import { TrashIcon } from '@heroicons/react/solid';
 
 export default function CallLogs({ calls, activeCallSid, onSelectCall, onClearLogs }) {
+  // State to track which call is minimized (using a Set)
+  const [minimizedCalls, setMinimizedCalls] = useState(new Set());
+
+  const handleToggleSummary = (callSid) => {
+    setMinimizedCalls(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(callSid)) {
+        newSet.delete(callSid); // If already minimized, remove it
+      } else {
+        newSet.add(callSid); // Otherwise, add to the set
+      }
+      return newSet;
+    });
+  };
+
   return (
     <div className="w-96 h-full bg-white/95 backdrop-blur-xl border border-gray-100 rounded-3xl shadow-xl flex flex-col overflow-hidden relative">
       <div className="bg-gradient-to-r from-gray-50 to-white p-6 border-b border-gray-200">
@@ -64,23 +80,29 @@ export default function CallLogs({ calls, activeCallSid, onSelectCall, onClearLo
                   </div>
                 </div>
 
+                {/* Call Summary Box */}
+                {call.summary && (
+                  <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-semibold text-gray-700">Call Summary</h3>
+                      <button
+                        onClick={() => handleToggleSummary(call.CallSid)}
+                        className="text-gray-500 hover:text-gray-700 transition-all"
+                      >
+                        {minimizedCalls.has(call.CallSid) ? '+' : '-'}
+                      </button>
+                    </div>
+
+                    {/* Show summary or just title based on minimized state */}
+                    {!minimizedCalls.has(call.CallSid) ? (
+                      <p className="text-sm text-gray-600 mt-2">{call.summary}</p>
+                    ) : null}
+                  </div>
+                )}
+
                 {activeCallSid === call.CallSid && (
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-500/10 to-cyan-600/10 pointer-events-none"></div>
                 )}
-                
-                {/* Download Button for each call
-                <div className="absolute bottom-4 right-4">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent triggering onSelectCall
-                      generatePDF(call.messages);
-                    }}
-                    className="bg-cyan-600 p-3 rounded-full hover:bg-cyan-700 text-white transition-all duration-200"
-                    title="Download Conversation as PDF"
-                  >
-                    <DownloadIcon className="h-4 w-4" />
-                  </button>
-                </div> */}
               </div>
             ))
           )}

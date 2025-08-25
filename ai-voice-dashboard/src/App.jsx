@@ -83,6 +83,13 @@ function App() {
             }
             return call;
           });
+          
+        case 'call_summary':
+          return prevCalls.map(call =>
+            call.CallSid === data.data.CallSid
+              ? { ...call, summary: data.data.summary }
+              : call
+          );
 
         default:
           console.log('Unknown message type:', data.type);
