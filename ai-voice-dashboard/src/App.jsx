@@ -5,10 +5,10 @@ import Header from './components/Header';
 import { Toaster } from 'react-hot-toast';
 
 function App() {
-  const [activeView, setActiveView] = useState('dashboard');
   const [activeCallSid, setActiveCallSid] = useState(null);
   const [calls, setCalls] = useState([]);
   const [ws, setWs] = useState(null);
+  const [showSidebar, setShowSidebar] = useState(false);
 
   // Load saved calls from localStorage on page load
   useEffect(() => {
@@ -24,6 +24,19 @@ function App() {
       localStorage.setItem("call_logs", JSON.stringify(calls));
     }
   }, [calls]);
+
+  const handleUpdateCallRemark = (callSid, remark) => {
+  setCalls(prevCalls => {
+    const updatedCalls = prevCalls.map(call => 
+      call.CallSid === callSid ? { ...call, remark } : call
+    );
+    
+    // Save to localStorage
+    localStorage.setItem('callLogs', JSON.stringify(updatedCalls));
+    
+    return updatedCalls;
+  });
+};
 
   // Derive active call from calls array
   const activeCall = activeCallSid ? calls.find(call => call.CallSid === activeCallSid) : null;
@@ -131,21 +144,48 @@ function App() {
     setCalls([]);
   };
 
+  const handleSelectCall = (call) => {
+    setActiveCallSid(call.CallSid);
+    setShowSidebar(true);
+  };
+
+  const handleCloseSidebar = () => {
+    setShowSidebar(false);
+    setActiveCallSid(null);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-white to-cyan-50/30 font-light">
       <Header />
       <Toaster position="top-right" reverseOrder={false} />
-      <main className="flex flex-1 p-6 gap-6 max-w-7xl mx-auto w-full h-[calc(100vh-6rem)]">
+      <main className="flex flex-1 p-6 max-w-7xl mx-auto w-full h-[calc(100vh-6rem)]">
         <CallLogs
           calls={calls}
           activeCallSid={activeCallSid}
-          onSelectCall={call => setActiveCallSid(call.CallSid)}
-          onClearLogs={clearCallLogs}  // Pass the clear function here
+          onSelectCall={handleSelectCall}
+          onClearLogs={clearCallLogs}
+          onUpdateCallRemark={handleUpdateCallRemark}
+          sidebarOpen={showSidebar}
+          className="z-20"
         />
-        <ActiveCall
-          call={activeCall}
-          onBack={() => setActiveCallSid(null)}
-        />
+        
+        {/* Active Call Sidebar */}
+        <div className={`fixed top-0 right-0 h-full w-96 bg-white/95 backdrop-blur-sm border-l border-gray-200 shadow-xl transform transition-transform duration-300 z-50 ${
+          showSidebar ? 'translate-x-0' : 'translate-x-full'
+        }`}>
+          <ActiveCall
+            call={activeCall}
+            onClose={handleCloseSidebar}
+          />
+        </div>
+        
+        {/* Semi-transparent overlay when sidebar is open */}
+        {showSidebar && (
+          <div 
+            className="fixed inset-0 bg-gray-900/10 backdrop-blur-sm z-40"
+            onClick={handleCloseSidebar}
+          />
+        )}
       </main>
     </div>
   );

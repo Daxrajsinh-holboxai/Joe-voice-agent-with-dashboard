@@ -1,33 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
-
-function StatusBadge({ status, className = '' }) {
-  const statusConfig = {
-    ringing: { 
-      color: 'bg-cyan-100 text-cyan-800 border-cyan-200', 
-      text: 'Ringing',
-      pulse: true
-    },
-    in_progress: { 
-      color: 'bg-cyan-100 text-cyan-800 border-cyan-200', 
-      text: 'Active',
-      icon: '🟢',
-      pulse: true
-    },
-    completed: { 
-      color: 'bg-cyan-100 text-cyan-800 border-cyan-200', 
-      text: 'Completed',
-      icon: '✓',
-      pulse: false
-    },
-    failed: { 
-      color: 'bg-cyan-100 text-cyan-800 border-cyan-200', 
-      text: 'Failed',
-      icon: '✗',
-      pulse: false
-    },
-  };
-}
+import { XIcon } from '@heroicons/react/solid';
 
 function parseText(text) {
   // Bold (Text wrapped in **)
@@ -60,7 +33,7 @@ function parseText(text) {
   return text;
 }
 
-export default function ActiveCall({ call, onBack }) {
+export default function ActiveCall({ call, onClose }) {
   const messagesEndRef = useRef(null);
 
   // Effect to scroll to the bottom when messages change
@@ -71,56 +44,56 @@ export default function ActiveCall({ call, onBack }) {
   }, [call?.messages]); // Re-run when messages change
 
   // PDF Generation
-const generatePDF = (messages) => {
-  const doc = new jsPDF();
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(12);
-  doc.text('AI Voice assistant live conversation call logs details', 10, 10);
+  const generatePDF = (messages) => {
+    const doc = new jsPDF();
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
+    doc.text('AI Voice assistant live conversation call logs details', 10, 10);
 
-  let y = 20; // Initial y position for text
-  const margin = 10;
-  const pageWidth = doc.internal.pageSize.width;
+    let y = 20; // Initial y position for text
+    const margin = 10;
+    const pageWidth = doc.internal.pageSize.width;
 
-  messages.forEach((msg) => {
-    if (y > 270) {
-      doc.addPage(); // Add a new page if the y position exceeds 270
-      y = 10; // Reset y position to the top of the new page
-    }
+    messages.forEach((msg) => {
+      if (y > 270) {
+        doc.addPage(); // Add a new page if the y position exceeds 270
+        y = 10; // Reset y position to the top of the new page
+      }
 
-    // Determine max width based on the page size
-    const maxWidth = pageWidth - 2 * margin;
+      // Determine max width based on the page size
+      const maxWidth = pageWidth - 2 * margin;
 
-    if (msg.speaker === 'user') {
-      doc.setTextColor(0, 128, 0);  // Green for User
-      doc.setFont('helvetica', 'bold');
-      doc.text('Customer:', margin, y);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(0, 0, 0);  // Reset to black for text
-      y += 10;
+      if (msg.speaker === 'user') {
+        doc.setTextColor(0, 128, 0);  // Green for User
+        doc.setFont('helvetica', 'bold');
+        doc.text('Customer:', margin, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);  // Reset to black for text
+        y += 10;
 
-      // Wrap the text to avoid overflow
-      const textLines = doc.splitTextToSize(msg.text, maxWidth);
-      doc.text(textLines, margin, y);
-      y += textLines.length * 5; // Adjust y based on text height
-    } else {
-      doc.setTextColor(0, 0, 255);  // Blue for Assistant
-      doc.setFont('helvetica', 'bold');
-      doc.text('Assistant:', margin, y);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(0, 0, 0);  // Reset to black for text
-      y += 10;
+        // Wrap the text to avoid overflow
+        const textLines = doc.splitTextToSize(msg.text, maxWidth);
+        doc.text(textLines, margin, y);
+        y += textLines.length * 5; // Adjust y based on text height
+      } else {
+        doc.setTextColor(0, 0, 255);  // Blue for Assistant
+        doc.setFont('helvetica', 'bold');
+        doc.text('Assistant:', margin, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);  // Reset to black for text
+        y += 10;
 
-      // Wrap the text to avoid overflow
-      const textLines = doc.splitTextToSize(msg.text, maxWidth);
-      doc.text(textLines, margin, y);
-      y += textLines.length * 5; // Adjust y based on text height
-    }
+        // Wrap the text to avoid overflow
+        const textLines = doc.splitTextToSize(msg.text, maxWidth);
+        doc.text(textLines, margin, y);
+        y += textLines.length * 5; // Adjust y based on text height
+      }
 
-    y += 15; // Add some space between messages
-  });
+      y += 15; // Add some space between messages
+    });
 
-  doc.save('conversation.pdf');
-};
+    doc.save('conversation.pdf');
+  };
 
   const handleDownload = (e) => {
     e.stopPropagation(); // Prevent triggering onBack
@@ -129,76 +102,66 @@ const generatePDF = (messages) => {
 
   if (!call) {
     return (
-      <div className="flex-1 bg-white/95 backdrop-blur-xl border border-gray-100 rounded-3xl shadow-xl overflow-hidden flex flex-col">
-        <div className="h-full flex flex-col items-center justify-center p-12">
-          <div className="relative mb-8">
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-full blur-xl opacity-20"></div>
-            <div className="relative w-24 h-24 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-full flex items-center justify-center">
-              <PhoneIcon className="h-12 w-12 text-white" />
-            </div>
+      <div className="h-full flex flex-col items-center justify-center p-12">
+        <div className="relative mb-8">
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-full blur-xl opacity-20"></div>
+          <div className="relative w-24 h-24 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-full flex items-center justify-center">
+            <PhoneIcon className="h-12 w-12 text-white" />
           </div>
-          
-          <h3 className="text-2xl font-light text-gray-900 mb-2">No Active Call</h3>
-          <p className="text-gray-500 text-center max-w-md leading-relaxed font-normal">
-            Select a call from the list to view live conversation details and real-time transcriptions.
-          </p>
-          
-          <div className="mt-8 flex space-x-2">
-            <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce"></div>
-            <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-            <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-          </div>
+        </div>
+        
+        <h3 className="text-2xl font-light text-gray-900 mb-2">No Active Call</h3>
+        <p className="text-gray-500 text-center max-w-md leading-relaxed font-normal">
+          Select a call from the list to view live conversation details and real-time transcriptions.
+        </p>
+        
+        <div className="mt-8 flex space-x-2">
+          <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce"></div>
+          <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+          <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 bg-white/95 backdrop-blur-xl border border-gray-100 rounded-3xl shadow-xl overflow-hidden flex flex-col">
+    <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 p-6 flex-shrink-0">
+      <div className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 p-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <button 
-              onClick={onBack}
-              className="group p-2 rounded-2xl hover:bg-white/80 transition-all duration-200 hover:shadow-md"
-            >
-              <ArrowLeftIcon className="h-5 w-5 text-gray-600 group-hover:text-gray-900 transition-colors" />
-            </button>
+            <div className="w-12 h-12 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-full flex items-center justify-center">
+              <span className="text-white text-lg font-light">
+                {call.From.slice(-2)}
+              </span>
+            </div>
             
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-lg font-light">
-                  {call.From.slice(-2)}
-                </span>
-              </div>
-              
-              <div>
-                <h2 className="text-xl font-light text-gray-900 flex items-center">
-                  {call.From}
-                  <StatusBadge status={call.status} className="ml-3" />
-                </h2>
-                <p className="text-sm text-gray-500 font-light">
-                  Call ID: {call.CallSid.slice(-8)}
-                </p>
-              </div>
+            <div>
+              <h2 className="text-xl font-light text-gray-900 flex items-center">
+                {call.From}
+                <StatusBadge status={call.status} className="ml-15" />
+              </h2>
+              <p className="text-sm text-gray-500 font-light">
+                Call ID: {call.CallSid.slice(-8)}
+              </p>
             </div>
           </div>
-          {/* Download Button in Header */}
+          
+          {/* Close Button */}
           <button
-            onClick={handleDownload}
-            className="bg-cyan-600 p-2 rounded-full hover:bg-cyan-700 text-white transition-all duration-200"
-            title="Download Conversation as PDF"
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-all duration-200"
+            title="Close"
           >
-            <DownloadIcon className="h-5 w-5" />
+            <XIcon className="h-5 w-5" />
           </button>
         </div>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto p-6">
-          <div className="max-w-4xl mx-auto">
+        <div className="h-full overflow-y-auto p-4">
+          <div className="mx-auto" style={{ maxWidth: '800px' }}>
             {call.messages?.length > 0 ? (
               <div className="space-y-4">
                 {call.messages.map((msg, index) => (
@@ -252,6 +215,17 @@ const generatePDF = (messages) => {
           </div>
         </div>
       </div>
+
+      {/* Download Button */}
+      <div className="p-4 border-t border-gray-100">
+        <button
+          onClick={handleDownload}
+          className="w-full bg-cyan-600 text-white py-3 rounded-xl hover:bg-cyan-700 transition-all duration-200 flex items-center justify-center"
+        >
+          <DownloadIcon className="h-5 w-5 mr-2" />
+          Download Conversation as PDF
+        </button>
+      </div>
     </div>
   );
 }
@@ -273,11 +247,55 @@ function ChatIcon({ className = "h-8 w-8" }) {
   );
 }
 
-function ArrowLeftIcon({ className = "h-5 w-5" }) {
+// Download Icon
+function DownloadIcon({ className = "h-4 w-4" }) {
   return (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8l-8 8-8-8" />
     </svg>
+  );
+}
+
+// StatusBadge Component
+function StatusBadge({ status, className = '' }) {
+  const statusConfig = {
+    ringing: {
+      color: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+      text: 'Ringing',
+      icon: '🔔',
+      pulse: true,
+    },
+    in_progress: {
+      color: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+      text: 'Active',
+      icon: '🟢',
+      pulse: true,
+    },
+    completed: {
+      color: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+      text: 'Completed',
+      icon: '✓',
+      pulse: false,
+    },
+    failed: {
+      color: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+      text: 'Failed',
+      icon: '✗',
+      pulse: false,
+    },
+  };
+
+  const config = statusConfig[status] || statusConfig.ringing;
+
+  return (
+    <div
+      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-normal border ${config.color} ${
+        config.pulse ? 'animate-pulse' : ''
+      } ${className}`}
+    >
+      <span className="mr-1">{config.icon}</span>
+      {config.text}
+    </div>
   );
 }
 
@@ -299,13 +317,4 @@ if (typeof document !== 'undefined') {
   const styleElement = document.createElement('style');
   styleElement.textContent = styles;
   document.head.appendChild(styleElement);
-}
-
-// Download Icon
-function DownloadIcon({ className = "h-4 w-4" }) {
-  return (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8l-8 8-8-8" />
-    </svg>
-  );
 }
