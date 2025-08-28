@@ -134,9 +134,6 @@ async def handle_full_transcript(decoded, twilio_ws, streamsid, callsid):
                 }
             })
 
-
-
-
 async def handle_text_message(decoded, twilio_ws, sts_ws, streamsid, callsid):
     await handle_barge_in(decoded, twilio_ws, streamsid)
     await handle_full_transcript(decoded, twilio_ws, streamsid, callsid)
@@ -152,9 +149,6 @@ async def twilio_handler(twilio_ws):
         config_message = load_config()
 
         await sts_ws.send(json.dumps(config_message))
-
-        
-
         async def sts_sender(sts_ws):
             while True:
                 chunk = await audio_queue.get()
@@ -265,7 +259,6 @@ async def twilio_handler(twilio_ws):
                 asyncio.ensure_future(twilio_receiver(twilio_ws)),
             ]
         )
-
         await twilio_ws.close()
 
 
@@ -285,7 +278,7 @@ async def router(websocket, path):
 
 # Entry point
 def main():
-    server = websockets.serve(router, "0.0.0.0", 5001)
+    server = websockets.serve(router, "0.0.0.0", 5000)
     print(f"Server starting on {os.getenv('BACKEND_URL')}")
     asyncio.get_event_loop().run_until_complete(server)
     asyncio.get_event_loop().run_forever()
