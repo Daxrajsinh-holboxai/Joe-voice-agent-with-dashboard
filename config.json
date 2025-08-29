@@ -28,158 +28,71 @@
                 "model": "gpt-4o-mini",
                 "temperature": 0.5
             },
-            "prompt": "You are an AI assistant handling customer service for a membership-based system called StretchLab. Your task is to assist customers with their membership inquiries, session bookings, and appointment schedules, all while maintaining a friendly and professional tone. when user provides member id or user id convert it similar to 'USR001' and incase of session id convert it similar to 'SES001'.\n When Listing down anything don't provide numbering instead form a valid sentence all the values.\nDo not use any Markdown formatting (like **bold**) when presenting items to the customer. Keep the responses simple and conversational as if speaking over the phone.\n when user asks about his sessions provide both scheduled, completed details if available.\n if the membership is shareable only then ask user for the name of trainee. if it is not shareable then assign membership holder name as the trainee and if user asks to change deny it politely and inform it is not possible with a reason. \n\n ### Functions and Their Descriptions:\n\n - **get_user_data**: Use this function to retrieve a customer’s personal details and membership information. It will return the user’s membership type, session count, and plan details., - **get_session_of_user**: Use this function to retrieve all sessions associated with a customer. It will provide details about past and upcoming sessions., - **add_new_user**: Use this function to register a new customer in the system. It will create a new user entry and associate them with a membership plan., - **add_new_session**: Use this function to book a new session for a customer. It will associate the session with the customer and store it in the session database., - **get_current_time**: Use this function to retrieve the current time. This is helpful when scheduling sessions or confirming appointment times., - **get_categories**: Use this function to retrieve the available categories of membership plans (e.g., ‘25-Minute Sessions’, ‘50-Minute Sessions’)., - **get_plans_in_category**: Use this function to retrieve details of membership plans available within a specific category.",
+            "prompt": "You are a voice agent handling customer queries for Summit Regenerative Orthopedic through a phone call. Have friendly conversation with the customer by helping them understand about their symtomps and treatements. The details of symptoms should be easy to understand for the customer and short recommend treatements that are available in the facility. The available treatments in the facility are PRP (Platelet-Rich Plasma), Lasers, and Non-Operative Orthopedics.If the customer wants to know more about the treatments, offer a short description and inform them that you can email them a free guide with more details. Ask for their email if they agree. For address-related queries, provide the office address: '8753 Yates Drive, Suite 110, Westminster, CO.' After giving the address, inform the customer that they will receive an SMS with the address. The office hours are Monday to Friday, 8am to 5pm and saturdays are based on appointment. You will also assist customers in booking appointments. Ask for the following basic details if the customer hasn't already provided them: 1. Name 2. Age 3. Symptoms (if the customer hasn’t shared them yet). If the customer hasn’t shared their symptoms, ask them about it. When listing options form valid sentences without numbering. Do not use any Markdown formatting. example email address abc.xyz@gmail.com. when asking for user's email address narrate the example email address letter by letter to the users and then ask user to do the same for his email address when user provides the email address again narrate the users email address letter by letter to confirm you got that right.### Functions and Their Descriptions:\n\n-**create_booking**:Use this function when a customer wants to book an appointment for treatment. It will take the customer's details, including symptoms, treatment choice, and preferred appointment time, and create a booking.\n\n-**send_email**:Use this function to mail the free guide to the user",
             "functions": [
                 {
-                    "name": "get_user_data",
-                    "description": "Retrieve the details of a user based on their user ID. Use this function when: A user requests their personal details or when an agent needs to verify a user's information.",
+                    "name": "create_booking",
+                    "description": "Create a new booking and save it to the system. The booking includes customer details like name, age, symptoms, treatment, and appointment information.",
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "user_id": {
+                            "name": {
                                 "type": "string",
-                                "description": "The unique ID of the user whose data is being requested."
-                            }
-                        },
-                        "required": [
-                            "user_id"
-                        ]
-                    }
-                },
-                {
-                    "name": "get_session_of_user",
-                    "description": "Get all the sessions associated with a user. Use this function when: A user asks for their session history or when an agent needs to know how many sessions a user has attended.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "user_id": {
-                                "type": "string",
-                                "description": "The unique ID of the user whose sessions are being requested."
-                            }
-                        },
-                        "required": [
-                            "user_id"
-                        ]
-                    }
-                },
-                {
-                    "name": "add_new_user",
-                    "description": "Add a new user to the membership database. Use this function when: A new user wants to register for a membership. This function will require details like the user's name, contact information, and membership plan.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "firstname": {
-                                "type": "string",
-                                "description": "The first name of the new user."
+                                "description": "The full name of the customer booking the appointment."
                             },
-                            "lastname": {
+                            "age": {
+                                "type": "integer",
+                                "description": "The age of the customer."
+                            },
+                            "symptoms": {
                                 "type": "string",
-                                "description": "The last name of the new user."
+                                "description": "The symptoms or medical condition the customer is experiencing (e.g., 'Knee pain')."
+                            },
+                            "treatment": {
+                                "type": "string",
+                                "description": "The treatment type being requested. Must be one of 'PRP', 'Lasers', or 'Non-Operative Orthopedics'."
                             },
                             "email": {
                                 "type": "string",
-                                "description": "The email address of the new user."
+                                "description": "The email address of the customer."
                             },
-                            "contact_number": {
+                            "appointment_date": {
                                 "type": "string",
-                                "description": "The contact number of the new user."
+                                "description": "The preferred appointment date (in 'YYYY-MM-DD' format)."
                             },
-                            "membership_plan": {
-                                "type": "object",
-                                "description": "The membership plan the user selects. This includes plan type, session duration, and pricing details."
-                            },
-                            "reason_for_joining": {
+                            "appointment_time": {
                                 "type": "string",
-                                "description": "The reason the user is joining the membership (e.g., flexibility improvement, pain relief)."
+                                "description": "The preferred appointment time (in 'HH:MM AM/PM' format)."
                             }
                         },
                         "required": [
-                            "firstname",
-                            "lastname",
+                            "name",
+                            "age",
+                            "symptoms",
+                            "treatment",
                             "email",
-                            "contact_number",
-                            "membership_plan",
-                            "reason_for_joining"
+                            "appointment_date",
+                            "appointment_time"
                         ]
                     }
                 },
                 {
-                    "name": "add_new_session",
-                    "description": "Add a new session for a user to the session database. Use this function when: A user schedules a new session or when an agent needs to schedule a session for a user.",
+                    "name": "send_email",
+                    "description": "Send an email to the provided email address with a predefined message. The function takes the recipient's email as a parameter and sends an email to that address.",
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "user_id": {
+                            "email_address": {
                                 "type": "string",
-                                "description": "The unique ID of the user scheduling the session."
-                            },
-                            "session_type": {
-                                "type": "string",
-                                "description": "The type of session the user is booking (e.g., '50-Minute Stretch')."
-                            },
-                            "session_date": {
-                                "type": "string",
-                                "description": "The date of the session in YYYY-MM-DD format."
-                            },
-                            "session_time": {
-                                "type": "string",
-                                "description": "The time of the session in HH:MM AM/PM format."
-                            },
-                            "trainer": {
-                                "type": "string",
-                                "description": "The name of the trainer who will be conducting the session. Pick one of these names randomly (Emma Johnson, James Williams, Olivia Brown)"
-                            },
-                            "trainee":{
-                                "type": "string",
-                                "description": "The name of the person who will participate. If membership is possible to share then new name provided by the user else name of the user itself who holds the membership"
-                            },
-                            "status": {
-                                "type": "string",
-                                "description": "The status of the session (e.g., 'Scheduled', 'Completed').",
-                                "default": "Scheduled"
+                                "description": "The recipient's email address to which the email will be sent."
                             }
                         },
                         "required": [
-                            "session_type",
-                            "session_date",
-                            "session_time"
-                        ]
-                    }
-                },
-                {
-                    "name": "get_current_time",
-                    "description": "Get the current time in the format HH:MM AM/PM. Use this function when: An agent needs to know the current time or when a user asks about the current time.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {},
-                        "required": []
-                    }
-                },
-                {
-                    "name": "get_categories",
-                    "description": "Get the available categories of membership plans (e.g., '25-Minute Sessions', '50-Minute Sessions'). Use this function when: A user asks about the types of membership plans or when an agent needs to provide options to a user.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {},
-                        "required": []
-                    }
-                },
-                {
-                    "name": "get_plans_in_category",
-                    "description": "Get the details of the plans available in a selected category (e.g., '25-Minute Sessions'). Use this function when: A user selects a category and asks for the available plans or when an agent needs to show the user the specific plans available in a category.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "category": {
-                                "type": "string",
-                                "description": "The category name the user has chosen (e.g., '25-Minute Sessions', '50-Minute Sessions')."
-                            }
-                        },
-                        "required": [
-                            "category"
+                            "email_address"
                         ]
                     }
                 }
+                
             ]
         },
         "speak": {

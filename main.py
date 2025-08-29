@@ -227,19 +227,34 @@ async def twilio_handler(twilio_ws):
                         global all_conversation
                         
                         try:
+                            # Get the summary and customer name from the async function
                             summary = await generate_summary(all_conversation.get(callsid, []))
-                            print(f"\033[93m{summary}\033[0m") 
+                            
+                            # Extract customer name and conversation summary
+                            cust_name = summary.get("cust_name", "Unknown")
+                            conversation_summary = summary.get("summary", "Summary unavailable")
+                            
+                            # Print for debugging (optional)
+                            print(f"Customer Name: {cust_name}")
+                            print(f"Conversation Summary: {conversation_summary}")
+                            
                         except Exception as e:
+                            # Handle any errors that occurred during summary generation
                             print(f"Error during summary generation: {e}")
-                            summary = "Summary unavailable"
+                            cust_name = "Unknown"
+                            conversation_summary = "Summary unavailable"
 
+                        # Sending the summary and status to the frontend
                         await broadcast_to_frontend({
                             "type": "call_summary",
                             "data": {
                                 "CallSid": callsid,
-                                "summary": summary
+                                "summary": conversation_summary,
+                                "name": cust_name
                             }
                         })
+
+                        # Broadcast the call completion status
                         await broadcast_to_frontend({
                             "type": "call_status",
                             "data": {
@@ -247,6 +262,7 @@ async def twilio_handler(twilio_ws):
                                 "CallStatus": "completed"
                             }
                         })
+
                         break
 
                 except Exception as e:

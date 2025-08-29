@@ -1,96 +1,72 @@
-from datetime import datetime, timedelta
 import json
+from datetime import datetime
 
+# File path for the booking database
+BOOKING_DB_FILE = 'booking_db.json'
 
-with open("membership_db.json", "r") as f:
-    membership_data = json.load(f)
+def load_bookings():
+    """Load existing bookings from the JSON file."""
+    try:
+        with open(BOOKING_DB_FILE, 'r') as file:
+            data = json.load(file)
+            return data.get("bookings", [])
+    except FileNotFoundError:
+        return []  # Return an empty list if the file doesn't exist
+    except json.JSONDecodeError:
+        return []  # If the file is corrupted or empty, return an empty list
 
-with open("session_db.json", "r") as f:
-    session_data = json.load(f)
+def save_bookings(bookings):
+    """Save the updated list of bookings to the JSON file."""
+    with open(BOOKING_DB_FILE, 'w') as file:
+        json.dump({"bookings": bookings}, file, indent=4)
+    print("Bookings saved successfully!")
 
-with open("membership_plan.json", "r") as f:
-    membership_plan = json.load(f)
+def create_booking(name, age, symptoms, treatment, email, phone, appointment_date, appointment_time):
+    """Create a new booking and save it to the file."""
+    # Validate the input data
+    if not name or not age or not symptoms or not treatment or not email or not phone or not appointment_date or not appointment_time:
+        raise ValueError("All fields are required to create a booking.")
 
+    # Format the booking date and time to ensure it's consistent
+    try:
+        # Ensure the date is in the correct format (YYYY-MM-DD)
+        datetime.strptime(appointment_date, '%Y-%m-%d')
+        # Ensure the time is in the correct format (HH:MM AM/PM)
+        datetime.strptime(appointment_time, '%I:%M %p')
+    except ValueError:
+        raise ValueError("Invalid date or time format. Please use 'YYYY-MM-DD' for date and 'HH:MM AM/PM' for time.")
 
-def get_user_data(user_id):
-    user_list = membership_data['users']
-    for user in user_list:
-        if user_id == user['user_id']:
-            return user
-    return "User Not Found"
+    # Load existing bookings
+    bookings = load_bookings()
 
-def get_session_of_user(user_id):
-    session_list = session_data['sessions']
-    user_session_list = []
-    for session in session_list:
-        if user_id == session['user_id']:
-            user_session_list.append(session)
-    return user_session_list
-
-def add_new_user(firstname, lastname, email, contact_number, membership_plan, reason_for_joining):
-    new_user_id = f"USR{len(membership_data['users']) + 1:03d}"
-
-    new_user = {
-        "user_id": new_user_id,
-        "first_name": firstname,
-        "last_name": lastname,
-        "email": email,
-        "contact_number": contact_number,
-        "membership_plan": membership_plan,
-        "reason_for_joining": reason_for_joining
-    }
-    
-    membership_data["users"].append(new_user)
-    
-    with open("membership_db.json", "w") as f:
-        json.dump(membership_data, f, indent=4)
-
-    return f"New user {firstname} {lastname} successfully registered with user ID {new_user_id}."
-
-def add_new_session(user_id, session_type, session_date, session_time, trainer, trainee, status="Scheduled"):
-    new_session_id = f"SES{len(session_data['sessions']) + 1:03d}"
-
-    new_session = {
-        "session_id": new_session_id,
-        "user_id": user_id,
-        "session_date": session_date,
-        "session_time": session_time,
-        "session_type": session_type,
-        "trainer": trainer,
-        "trainee": trainee,
-        "status": status
+    # Create the new booking entry
+    new_booking = {
+        "name": name,
+        "age": age,
+        "symptoms": symptoms,
+        "treatment": treatment,
+        "appointment_date": appointment_date,
+        "appointment_time": appointment_time,
+        "contact_email": email
     }
 
-    session_data["sessions"].append(new_session)
-    
-    with open("session_db.json", "w") as f:
-        json.dump(session_data, f, indent=4)
+    # Add the new booking to the list
+    bookings.append(new_booking)
 
-    return f"New session scheduled successfully with session ID {new_session_id}."
+    # Save the updated bookings to the file
+    save_bookings(bookings)
 
-def get_current_time():
-    current_time = datetime.now()
-    formatted_time = current_time.strftime("%I:%M %p")
-    
-    return f"The current time is: {formatted_time}"
+    return f"Booking for {name} has been created successfully!"
 
-def get_categories():
-    return list(membership_plan["membership_plans"].keys())
-
-def get_plans_in_category(category):
-    if category in membership_plan["membership_plans"]:
-        return membership_plan["membership_plans"][category]
-    else:
-        return f"Category '{category}' not found."
+# Example usage:
+# Uncomment to test the create_booking function
+# create_booking('John Doe', 34, 'Knee pain, limited mobility', 'PRP', 'john.doe@example.com', '+1234567890', '2025-08-28', '10:00 AM')
+def send_email(email_address):
+    return f"Email sent to {email_address} successfully"
 
 FUNCTION_MAP = {
-    'get_user_data': get_user_data,
-    'get_session_of_user': get_session_of_user,
-    'add_new_user': add_new_user,
-    'add_new_session' : add_new_session,
-    'get_current_time' :  get_current_time,
-    'get_categories' : get_categories,
-    'get_plans_in_category' : get_plans_in_category
+    'create_booking' : create_booking,
+    'send_email' : send_email
 }
 
 
