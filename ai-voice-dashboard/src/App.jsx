@@ -98,11 +98,16 @@ function App() {
           });
           
         case 'call_summary':
-          return prevCalls.map(call =>
-            call.CallSid === data.data.CallSid
-              ? { ...call, summary: data.data.summary }
-              : call
-          );
+          setCalls(prevCalls => prevCalls.map(call => {
+            if (call.CallSid === data.data.CallSid) {
+              return {
+                ...call,
+                summary: data.data.summary,
+                name: data.data.name // Make sure this field exists
+              };
+            }
+            return call;
+          }));
 
         default:
           console.log('Unknown message type:', data.type);

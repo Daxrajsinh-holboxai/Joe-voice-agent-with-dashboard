@@ -159,8 +159,9 @@ export default function CallLogs({ calls, activeCallSid, onSelectCall, onClearLo
                     </div>
                     <div>
                       {/* Display updated customer name */}
-                      <div className="font-normal text-gray-900">{customerNames[call.CallSid] || call.From}</div> {/* Using the updated customer name */}
-                      <div className="text-sm text-gray-500 font-light">To: {call.To}</div>
+                      {/* <div className="font-normal text-gray-900">{customerNames[call.CallSid] || call.From}</div> Using the updated customer name */}
+                      <div className="font-normal text-gray-900">{call.name}</div>
+                      <div className="text-sm text-gray-500 font-light">Phone no: {call.From}</div>
                     </div>
                   </div>
 
@@ -189,7 +190,8 @@ export default function CallLogs({ calls, activeCallSid, onSelectCall, onClearLo
                         {/* Expandable summary content */}
                         {expandedSummaries.has(call.CallSid) && (
                           <div className="mt-1 p-2 bg-gray-50 border border-gray-200 rounded-lg">
-                            <p className="text-xs text-gray-600">{summaries[call.CallSid]}</p> {/* Display only the summary */}
+                            {/* <p className="text-xs text-gray-600">{summaries[call.CallSid]}</p> Display only the summary */}
+                            <p className="text-xs text-gray-600">{call.summary}</p>
                           </div>
                         )}
                       </div>
