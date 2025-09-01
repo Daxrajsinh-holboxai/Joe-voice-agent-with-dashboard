@@ -1,7 +1,8 @@
 from openai import OpenAI
 import os
+import json
+import re
 
-# using openai to generate summary
 async def generate_summary(conversation: list) -> dict:
     """
     Summarizes the entire conversation and retrieves customer name (via LLM).
@@ -10,7 +11,7 @@ async def generate_summary(conversation: list) -> dict:
     if not conversation or len(conversation) == 0:
         return {"cust_name": "Unknown", "summary": "No conversation to summarize."}
 
-    # Format the conversation into a string format, keeping user and assistant messages clearly separated
+    # Format the conversation into a string format
     formatted_conversation = ""
     
     for entry in conversation:
@@ -28,34 +29,48 @@ async def generate_summary(conversation: list) -> dict:
     )
 
     try:
-        # Send the conversation to OpenAI for summarization
-        response = client.responses.create(
-            model="gpt-4o-mini",  # Use the model you prefer
+        # Use the chat.completions endpoint instead of responses.create
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
             temperature=0.2,
-            instructions=(
-                "Summarize the following conversation and identify the customer's name, if mentioned. "
-                "The response should include both the name of the customer (if available) and a concise summary of the conversation, "
-                "highlighting the customer's details, symptoms, and the assistant's suggestions. "
-                "Your response should be in strictly JSON format, like this: "
-                '{ "cust_name" : <Customer name that it has provided throughout the conversation>, "summary": <Summary of the whole conversation> }'
-            ),
-            input=f"Conversation:\n{formatted_conversation}\n\nProvide a summary of the conversation with the customer's name."
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a helpful assistant that summarizes conversations. "
+                        "Your response must be valid JSON only with this exact structure: "
+                        '{ "cust_name": "customer name", "summary": "conversation summary" }'
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": f"Please summarize this conversation and extract the customer's name:\n\n{formatted_conversation}"
+                }
+            ],
+            response_format={"type": "json_object"}
         )
 
-        result = response.output_text.strip()
-
-        # Attempt to extract the customer's name and summary from the response
-        if "Name:" in result:
-            parts = result.split("Name:")
-            cust_name = parts[1].split("\n")[0].strip()  # Extract the name after 'Name:'
-            summary = parts[0].strip()  # The remaining part is the summary
-        else:
-            cust_name = "Unknown"
-            summary = result
-
-        # Return the response in the desired JSON format
-        return {"cust_name": cust_name, "summary": summary}
-
+        # Extract the JSON response
+        result = response.choices[0].message.content.strip()
+        
+        # Try to parse as JSON
+        try:
+            summary_data = json.loads(result)
+            return summary_data
+        except json.JSONDecodeError:
+            # If it's not valid JSON, try to extract name and summary manually
+            cust_name_match = re.search(r'"cust_name":\s*"([^"]*)"', result)
+            summary_match = re.search(r'"summary":\s*"([^"]*)"', result)
+            
+            if cust_name_match and summary_match:
+                return {
+                    "cust_name": cust_name_match.group(1),
+                    "summary": summary_match.group(1)
+                }
+            else:
+                # Fallback if we can't extract the fields
+                return {"cust_name": "Unknown", "summary": result}
+            
     except Exception as e:
         print(f"Error generating summary: {e}")
-        return {"cust_name": "Unknown", "summary": "Summary unavailable due to an error."}
+        return {"cust_name": "Unknown", "summary": f"Summary unavailable due to an error: {str(e)}"}

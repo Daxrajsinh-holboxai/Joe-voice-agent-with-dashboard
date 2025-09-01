@@ -204,11 +204,19 @@ async def twilio_handler(twilio_ws):
                     event_type = data["event"]
 
                     if event_type == "start":
+                        # Extract custom parameters from the start event
+                        custom_params = data["start"].get("customParameters", {})
+                        from_number = custom_params.get("from", "Unknown")
+                        to_number = custom_params.get("to", "Unknown")
+
+                        print("from_number:", from_number)
+                        print("to_number:", to_number)
+
                         streamsid_queue.put_nowait({
                             "streamSid": data["start"]["streamSid"],
                             "callSid": data["start"]["callSid"],
-                            "from": data["start"].get("from", "Customer"),
-                            "to": data["start"].get("to", "AI Agent")
+                            "from": from_number,  # Now includes the actual caller number
+                            "to": to_number      # Now includes the called number
                         })
 
                     elif event_type == "media" and "payload" in data["media"]:
@@ -294,7 +302,7 @@ async def router(websocket, path):
 
 # Entry point
 def main():
-    server = websockets.serve(router, "0.0.0.0", 5000)
+    server = websockets.serve(router, "localhost", 5000)
     print(f"Server starting on {os.getenv('BACKEND_URL')}")
     asyncio.get_event_loop().run_until_complete(server)
     asyncio.get_event_loop().run_forever()
