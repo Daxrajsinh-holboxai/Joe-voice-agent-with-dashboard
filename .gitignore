@@ -1,10 +1,15 @@
 # general
 
+# credentials
+credentials.json
+token.json
+
 # environment artifacts
 .venv
 .env
 venv/
 voice
+voice_env
 venv.bak/
 .vscode/
 .DS_Store

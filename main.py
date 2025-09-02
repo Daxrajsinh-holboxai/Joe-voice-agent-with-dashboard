@@ -302,7 +302,7 @@ async def router(websocket, path):
 
 # Entry point
 def main():
-    server = websockets.serve(router, "0.0.0.0", 5000)
+    server = websockets.serve(router, "0.0.0.0", 5001)
     print(f"Server starting on {os.getenv('BACKEND_URL')}")
     asyncio.get_event_loop().run_until_complete(server)
     asyncio.get_event_loop().run_forever()
