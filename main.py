@@ -5,6 +5,8 @@ import sys
 import websockets
 import ssl
 import os
+from twilio.rest import Client
+
 from dotenv import load_dotenv
 from agent_function import FUNCTION_MAP
 from generate_summary import generate_summary
@@ -93,6 +95,23 @@ async def handle_barge_in(decoded, twilio_ws, streamsid):
         }
         await twilio_ws.send(json.dumps(clear_message))
 
+async def hangup_call_via_rest(callsid):
+    account_sid = os.getenv('TWILIO_ACCOUNT_SID')
+    auth_token = os.getenv('TWILIO_AUTH_TOKEN')
+    
+    if not account_sid or not auth_token:
+        print("Twilio credentials not found in environment variables")
+        return False
+    
+    try:
+        client = Client(account_sid, auth_token)
+        call = client.calls(callsid).update(status='completed')
+        print(f"Call {callsid} hung up via REST API")
+        return True
+    except Exception as e:
+        print(f"Error hanging up call via REST API: {e}")
+        return False
+    
 async def handle_full_transcript(decoded, twilio_ws, streamsid, callsid):
     if decoded['type'] == 'ConversationText':
         role = decoded.get('role')
@@ -102,6 +121,16 @@ async def handle_full_transcript(decoded, twilio_ws, streamsid, callsid):
         if role == 'user' and content:
             print(f"\033[92mUser:\033[0m {content}")  # Green
             # Update the full transcription
+
+            # Check if user said "Stop" to end the call
+            if content.lower() in ["stop", "stop.", "hang up", "end call"]:
+                print("User requested to stop the call")
+                # Try to hang up using REST API
+                success = await hangup_call_via_rest(callsid)
+                if success:
+                    # Also send the media stream hangup command
+                    await send_hangup_command(twilio_ws, streamsid)
+                return
             
             if callsid not in full_transcript:
                 full_transcript[callsid] = ""
@@ -140,6 +169,14 @@ async def handle_text_message(decoded, twilio_ws, sts_ws, streamsid, callsid):
 
     if decoded["type"] == "FunctionCallRequest":
         await handle_function_call_request(decoded, sts_ws)
+
+async def send_hangup_command(twilio_ws, streamsid):
+    hangup_message = {
+        "event": "hangup",
+        "streamSid": streamsid
+    }
+    await twilio_ws.send(json.dumps(hangup_message))
+    print("Sent hangup command to Twilio")
 
 async def twilio_handler(twilio_ws):
     audio_queue = asyncio.Queue()
@@ -302,7 +339,7 @@ async def router(websocket, path):
 
 # Entry point
 def main():
-    server = websockets.serve(router, "0.0.0.0", 5000)
+    server = websockets.serve(router, "localhost", 5000)
     print(f"Server starting on {os.getenv('BACKEND_URL')}")
     asyncio.get_event_loop().run_until_complete(server)
     asyncio.get_event_loop().run_forever()
