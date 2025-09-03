@@ -6,6 +6,7 @@ import websockets
 import ssl
 import os
 from dotenv import load_dotenv
+import inspect
 from agent_function import FUNCTION_MAP
 from generate_summary import generate_summary
 load_dotenv()
@@ -14,6 +15,7 @@ load_dotenv()
 frontend_clients = set()
 full_transcript = {}
 all_conversation = {}
+active_calls = {}
 
 async def broadcast_to_frontend(data):
     if not frontend_clients:
@@ -44,15 +46,26 @@ def load_config():
     with open("config.json", "r") as f:
         return json.load(f)
 
-def execute_function_call(func_name, arguments):
-    if func_name in FUNCTION_MAP:
-        result = FUNCTION_MAP[func_name](**arguments)
-        print(f"Function call result: {result}")
-        return result
-    else:
+def execute_function_call(func_name, arguments, call_sid=None):
+    if func_name not in FUNCTION_MAP:
         result = {"error": f"Unknown function: {func_name}"}
         print(result)
         return result
+    
+    func = FUNCTION_MAP[func_name]
+
+    sig = inspect.signature(func)
+    if call_sid and call_sid in active_calls:
+        if "phone_number" in sig.parameters:
+            arguments["phone_number"] = active_calls[call_sid]["from"]
+
+    try:
+        result = func(**arguments)
+        print(f"Function call result: {result}")
+        return result
+    except Exception as e:
+        print(f"Function {func_name} call failed: {e}")
+        return {"error": str(e)}
 
 def create_function_call_response(func_id, func_name, result):
     return {
@@ -62,7 +75,7 @@ def create_function_call_response(func_id, func_name, result):
         "content": json.dumps(result)
     }
 
-async def handle_function_call_request(decoded, sts_ws):
+async def handle_function_call_request(decoded, sts_ws, callsid):
     try:
         for function_call in decoded["functions"]:
             func_name = function_call["name"]
@@ -70,7 +83,7 @@ async def handle_function_call_request(decoded, sts_ws):
             arguments = json.loads(function_call["arguments"])
             print(f"Function call: {func_name} (ID: {func_id}), arguments: {arguments}")
 
-            result = execute_function_call(func_name, arguments)
+            result = execute_function_call(func_name, arguments, callsid)
 
             function_result = create_function_call_response(func_id, func_name, result)
             await sts_ws.send(json.dumps(function_result))
@@ -139,143 +152,186 @@ async def handle_text_message(decoded, twilio_ws, sts_ws, streamsid, callsid):
     await handle_full_transcript(decoded, twilio_ws, streamsid, callsid)
 
     if decoded["type"] == "FunctionCallRequest":
-        await handle_function_call_request(decoded, sts_ws)
+        await handle_function_call_request(decoded, sts_ws, callsid)
 
 async def twilio_handler(twilio_ws):
     audio_queue = asyncio.Queue()
     streamsid_queue = asyncio.Queue()
 
+    async def sts_sender(sts_ws):
+        while True:
+            chunk = await audio_queue.get()
+            if isinstance(chunk, bytes):  # Ensure we're sending bytes
+                await sts_ws.send(chunk)
+            else:
+                print(f"Unexpected data type in queue: {type(chunk)}")
+                break
+    
+    async def sts_receiver(sts_ws):
+        start_info = await streamsid_queue.get()  # First get the start_info
+        streamsid = start_info["streamSid"]
+        callsid = start_info["callSid"]
+        caller = start_info.get("from", "Customer")
+        callee = start_info.get("to", "AI Agent")
+        
+        # Notify frontend about new call with all details
+        await broadcast_to_frontend({
+            "type": "incoming_call",
+            "data": {
+                "CallSid": callsid,
+                "From": caller,  # Include caller number
+                "To": callee,   # Include callee number
+                "status": "in_progress",
+                "messages": []
+            }
+        })
+
+        async for message in sts_ws:
+            if isinstance(message, str):
+                decoded = json.loads(message)
+                await handle_text_message(decoded, twilio_ws, sts_ws, streamsid, callsid)
+                continue
+            raw_mulaw = message
+
+            media_message = {
+                "event": "media",
+                "streamSid": streamsid,
+                "media": {"payload": base64.b64encode(raw_mulaw).decode("ascii")},
+            }
+
+            await twilio_ws.send(json.dumps(media_message))
+            global full_transcript
+            full_transcript[callsid] = ""
+
+    async def sts_receiver(sts_ws):
+        start_info = await streamsid_queue.get()  # First get the start_info
+        streamsid = start_info["streamSid"]
+        callsid = start_info["callSid"]
+        caller = start_info.get("from", "Customer")
+        callee = start_info.get("to", "AI Agent")
+        
+        # Notify frontend about new call with all details
+        await broadcast_to_frontend({
+            "type": "incoming_call",
+            "data": {
+                "CallSid": callsid,
+                "From": caller,  # Include caller number
+                "To": callee,   # Include callee number
+                "status": "in_progress",
+                "messages": []
+            }
+        })
+
+        async for message in sts_ws:
+            if isinstance(message, str):
+                decoded = json.loads(message)
+                await handle_text_message(decoded, twilio_ws, sts_ws, streamsid, callsid)
+                continue
+            raw_mulaw = message
+
+            media_message = {
+                "event": "media",
+                "streamSid": streamsid,
+                "media": {"payload": base64.b64encode(raw_mulaw).decode("ascii")},
+            }
+
+            await twilio_ws.send(json.dumps(media_message))
+            global full_transcript
+            full_transcript[callsid] = ""
+
+    async def twilio_receiver(twilio_ws):
+        BUFFER_SIZE = 20 * 160
+
+        inbuffer = bytearray(b"")
+        async for message in twilio_ws:
+            try:
+                data = json.loads(message)
+                event_type = data["event"]
+
+                if event_type == "start":
+                    # Extract custom parameters from the start event
+                    custom_params = data["start"].get("customParameters", {})
+                    from_number = custom_params.get("from", "Unknown")
+                    to_number = custom_params.get("to", "Unknown")
+                    call_sid = data["start"]["callSid"]
+
+                    active_calls[call_sid] = {
+                        "from": from_number,
+                        "to": to_number
+                    }
+                    print("from_number:", from_number)
+                    print("to_number:", to_number)
+                         
+                    streamsid_queue.put_nowait({
+                        "streamSid": data["start"]["streamSid"],
+                        "callSid": data["start"]["callSid"],
+                        "from": from_number,  # Now includes the actual caller number
+                        "to": to_number      # Now includes the called number
+                    })
+
+                elif event_type == "media" and "payload" in data["media"]:
+                    # Process inbound audio only
+                    if data["media"].get("track") == "inbound":
+                        chunk = base64.b64decode(data["media"]["payload"])
+                        inbuffer.extend(chunk)
+                        
+                        # Process complete chunks
+                        while len(inbuffer) >= BUFFER_SIZE:
+                            await audio_queue.put(bytes(inbuffer[:BUFFER_SIZE]))
+                            del inbuffer[:BUFFER_SIZE]
+
+                elif event_type == "stop":
+                    callsid = data["stop"]["callSid"]
+                    global all_conversation
+                    
+                    try:
+                        # Get the summary and customer name from the async function
+                        summary = await generate_summary(all_conversation.get(callsid, []))
+                        
+                        # Extract customer name and conversation summary
+                        cust_name = summary.get("cust_name", "Unknown")
+                        conversation_summary = summary.get("summary", "Summary unavailable")
+                        
+                        # Print for debugging (optional)
+                        print(f"Customer Name: {cust_name}")
+                        print(f"Conversation Summary: {conversation_summary}")
+                        
+                    except Exception as e:
+                        # Handle any errors that occurred during summary generation
+                        print(f"Error during summary generation: {e}")
+                        cust_name = "Unknown"
+                        conversation_summary = "Summary unavailable"
+
+                    # Sending the summary and status to the frontend
+                    await broadcast_to_frontend({
+                        "type": "call_summary",
+                        "data": {
+                            "CallSid": callsid,
+                            "summary": conversation_summary,
+                            "name": cust_name
+                        }
+                    })
+
+                    # Broadcast the call completion status
+                    await broadcast_to_frontend({
+                        "type": "call_status",
+                        "data": {
+                            "CallSid": callsid,
+                            "CallStatus": "completed"
+                        }
+                    })
+
+                    break
+
+            except Exception as e:
+                print(f"Error in twilio_receiver: {e}")
+                break
+
     async with sts_connect() as sts_ws:
         config_message = load_config()
 
         await sts_ws.send(json.dumps(config_message))
-        async def sts_sender(sts_ws):
-            while True:
-                chunk = await audio_queue.get()
-                if isinstance(chunk, bytes):  # Ensure we're sending bytes
-                    await sts_ws.send(chunk)
-                else:
-                    print(f"Unexpected data type in queue: {type(chunk)}")
-                    break
 
-        async def sts_receiver(sts_ws):
-            start_info = await streamsid_queue.get()  # First get the start_info
-            streamsid = start_info["streamSid"]
-            callsid = start_info["callSid"]
-            caller = start_info.get("from", "Customer")
-            callee = start_info.get("to", "AI Agent")
-            
-            # Notify frontend about new call with all details
-            await broadcast_to_frontend({
-                "type": "incoming_call",
-                "data": {
-                    "CallSid": callsid,
-                    "From": caller,  # Include caller number
-                    "To": callee,   # Include callee number
-                    "status": "in_progress",
-                    "messages": []
-                }
-            })
-
-            async for message in sts_ws:
-                if isinstance(message, str):
-                    decoded = json.loads(message)
-                    await handle_text_message(decoded, twilio_ws, sts_ws, streamsid, callsid)
-                    continue
-                raw_mulaw = message
-
-                media_message = {
-                    "event": "media",
-                    "streamSid": streamsid,
-                    "media": {"payload": base64.b64encode(raw_mulaw).decode("ascii")},
-                }
-
-                await twilio_ws.send(json.dumps(media_message))
-                global full_transcript
-                full_transcript[callsid] = ""
-
-        async def twilio_receiver(twilio_ws):
-            BUFFER_SIZE = 20 * 160
-
-            inbuffer = bytearray(b"")
-            async for message in twilio_ws:
-                try:
-                    data = json.loads(message)
-                    event_type = data["event"]
-
-                    if event_type == "start":
-                        # Extract custom parameters from the start event
-                        custom_params = data["start"].get("customParameters", {})
-                        from_number = custom_params.get("from", "Unknown")
-                        to_number = custom_params.get("to", "Unknown")
-
-                        print("from_number:", from_number)
-                        print("to_number:", to_number)
-
-                        streamsid_queue.put_nowait({
-                            "streamSid": data["start"]["streamSid"],
-                            "callSid": data["start"]["callSid"],
-                            "from": from_number,  # Now includes the actual caller number
-                            "to": to_number      # Now includes the called number
-                        })
-
-                    elif event_type == "media" and "payload" in data["media"]:
-                        # Process inbound audio only
-                        if data["media"].get("track") == "inbound":
-                            chunk = base64.b64decode(data["media"]["payload"])
-                            inbuffer.extend(chunk)
-                            
-                            # Process complete chunks
-                            while len(inbuffer) >= BUFFER_SIZE:
-                                await audio_queue.put(bytes(inbuffer[:BUFFER_SIZE]))
-                                del inbuffer[:BUFFER_SIZE]
-
-                    elif event_type == "stop":
-                        callsid = data["stop"]["callSid"]
-                        global all_conversation
-                        
-                        try:
-                            # Get the summary and customer name from the async function
-                            summary = await generate_summary(all_conversation.get(callsid, []))
-                            
-                            # Extract customer name and conversation summary
-                            cust_name = summary.get("cust_name", "Unknown")
-                            conversation_summary = summary.get("summary", "Summary unavailable")
-                            
-                            # Print for debugging (optional)
-                            print(f"Customer Name: {cust_name}")
-                            print(f"Conversation Summary: {conversation_summary}")
-                            
-                        except Exception as e:
-                            # Handle any errors that occurred during summary generation
-                            print(f"Error during summary generation: {e}")
-                            cust_name = "Unknown"
-                            conversation_summary = "Summary unavailable"
-
-                        # Sending the summary and status to the frontend
-                        await broadcast_to_frontend({
-                            "type": "call_summary",
-                            "data": {
-                                "CallSid": callsid,
-                                "summary": conversation_summary,
-                                "name": cust_name
-                            }
-                        })
-
-                        # Broadcast the call completion status
-                        await broadcast_to_frontend({
-                            "type": "call_status",
-                            "data": {
-                                "CallSid": callsid,
-                                "CallStatus": "completed"
-                            }
-                        })
-
-                        break
-
-                except Exception as e:
-                    print(f"Error in twilio_receiver: {e}")
-                    break
         await asyncio.wait(
             [
                 asyncio.ensure_future(sts_sender(sts_ws)),

@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from google_calendar_functions import get_busy_times, create_new_events
+from google_calendar_functions import get_busy_times, create_new_booking
 from zoneinfo import ZoneInfo
 BOOKING_DB_FILE = 'booking_db.json'
 
@@ -21,7 +21,10 @@ def save_bookings(bookings):
         json.dump({"bookings": bookings}, file, indent=4)
     print("Bookings saved successfully!")
 
-def create_booking(name, age, symptoms, treatment, email, phone, appointment_date, appointment_time):
+def get_phone_number(phone_number):
+    return f"Customers Phone Number is {phone_number}"
+
+def create_booking(name, age, symptoms, treatment, email, phone_number, appointment_date, appointment_time):
     """Create a new booking and save it to the file."""
     if not name or not age or not symptoms or not treatment or not email or not phone or not appointment_date or not appointment_time:
         raise ValueError("All fields are required to create a booking.")
@@ -44,21 +47,38 @@ def create_booking(name, age, symptoms, treatment, email, phone, appointment_dat
         "contact_email": email
     }
 
-    bookings.append(new_booking)
+    if phone_number not in bookings:
+        bookings[phone_number] = []
+    
+    booking[phone_number].append(new_booking)
 
     save_bookings(bookings)
+
+    try:
+        date_obj = datetime.strptime(appointment_date, '%Y-%m-%d').date()
+        time_obj = datetime.strptime(appointment_time, '%I:%M %p').time()
+
+        naive_dt = datetime.combine(date_obj, time_obj)
+
+        start_dt = naive_dt.replace(ZoneInfo("America/Denver"))
+
+        start_time = start_dt.isoformat()
+
+        if new_booking["name"] and new_booking["contact_email"]:
+            create_new_booking(new_booking["name"], start_time, new_booking["contact_email"])
+        
+    except Exception as e:
+        return f"Error while processing booking: {e}"    
 
     return f"Booking for {name} has been created successfully!"
 
 def send_email(email_address):
     return f"Email sent to {email_address} successfully"
 
-def convert_to_iso_format(year, month, day, hour, minute, timezone_str):
-    local_dt = datetime(year, month, day, hour, minute, tzinfo=ZoneInfo(timezone_str))
+def convert_to_iso_format(year, month, day, hour, minute):
+    local_dt = datetime(year, month, day, hour, minute, tzinfo=ZoneInfo("America/Denver"))
     
-    utc_dt = local_dt.astimezone(ZoneInfo("UTC"))
-    
-    iso_string = utc_dt.isoformat()
+    iso_string = local_dt.isoformat()
     
     return iso_string
 
@@ -72,11 +92,22 @@ def get_current_time():
 
     
 FUNCTION_MAP = {
-    'create_booking' : create_booking,
-    'send_email' : send_email,
-    'convert_to_iso_format' : convert_to_iso_format,
-    'get_current_time' : get_current_time,
-    'get_busy_times' : get_busy_times
+    'create_booking': create_booking,
+    'send_email': send_email,
+    'convert_to_iso_format': convert_to_iso_format,
+    'get_current_time': get_current_time,
+    'get_busy_times': get_busy_times,
+    'get_phone_number': get_phone_number
 }
 
+# {
+#             "name": "Jane Smith",
+#             "age": 45,
+#             "symptoms": "Chronic back pain",
+#             "treatment": "Lasers",
+#             "appointment_date": "2025-08-29",
+#             "appointment_time": "2:00 PM",
+#             "contact_email": "jane.smith@example.com",
+#             "contact_phone": "+1234567891"
+# }
 

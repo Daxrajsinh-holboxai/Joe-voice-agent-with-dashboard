@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta
 import os.path
 from zoneinfo import ZoneInfo
 from google.auth.transport.requests import Request
@@ -77,27 +77,30 @@ def get_busy_times(start_time, end_time):
         return ["An error occurred while retrieving events."]
 
 
-def create_new_events():
+def create_new_booking(patient_name,start_time, email_address):
     creds = get_creds()
     try:
         service = build("calendar", "v3", credentials=creds)
+        start_dt = datetime.fromisoformat(start_time)
+        end_dt = start_dt + timedelta(hours=1)
+        end_time = end_dt.isoformat()
         event = {
-            'summary': 'Client Appointment',
+            'summary': f'Appointment with {patient_name}',
             'location': '8753 Yates Drive, Suite 110, Westminster, CO',
-            'description': 'Patient Wants to visit',
             'start': {
-                'dateTime': '2015-05-28T09:00:00-07:00',
+                'dateTime': start_time,
                 'timeZone': 'America/Denver',
             },
             'end': {
-                'dateTime': '2015-05-28T17:00:00-07:00',
+                'dateTime': end_time,
                 'timeZone': 'America/Denver',
             },
             'recurrence': [
                 'RRULE:FREQ=DAILY;COUNT=2'
             ],
             'attendees': [
-                {'email': 'nairvishnu26523@gmail.com'}
+                {'email': email_address},
+                {'email': 'vishnu.nair@holbox.ai'}
             ],
             'reminders': {
                 'useDefault': False,
@@ -110,7 +113,9 @@ def create_new_events():
 
         event = service.events().insert(calendarId='primary', body=event).execute()
         print('Event created: %s',  event.get('htmlLink'))
+        return True
     except Exception as error:
         print("Error Creating New Event: ", error)
+        return False
 
 
